@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:15
+    container_name: psql_db
+    environment:
+      POSTGRES_DB: pr
+      POSTGRES_USER: pr
+      POSTGRES_PASSWORD: lab
+    ports:
+      - "5432:5432"
+    networks:
+      - lab_network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "pr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+      - "8888:8888"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - lab_network
+
+volumes:
+  postgres_data:
+
+networks:
+  lab_network:
+    driver: bridge

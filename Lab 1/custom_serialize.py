@@ -4,12 +4,12 @@ def custom_serialize(data):
         for key, value in data.items():
             key_type = get_type_string(key)
             value_serialized = custom_serialize(value)
-            items.append(f"D:k:{key_type}({key}):v:{value_serialized}")
+            items.append(f"Dictionar:cheie:{key_type}({key}):valoare:{value_serialized}")
         return "{" + "; ".join(items) + "}"
 
     elif isinstance(data, list):
         items = [custom_serialize(item) for item in data]
-        return f"L:[{'; '.join(items)}]"
+        return f"Lista:[{'; '.join(items)}]"
 
     elif isinstance(data, str):
         return f"str({data})"
@@ -29,8 +29,8 @@ def custom_serialize(data):
 
 def custom_deserialize(serialized_data):
     serialized_data = serialized_data.strip()
-    if serialized_data.startswith("L:["):
-        items_str = serialized_data[3:-1]  # Remove L:[ and ]
+    if serialized_data.startswith("Lista:["):
+        items_str = serialized_data[7:-1]  # Remove Lista:[ and ]
         items = split_serialized_items(items_str)
         return [custom_deserialize(item) for item in items]
 
@@ -39,9 +39,9 @@ def custom_deserialize(serialized_data):
         items = split_serialized_items(items_str)
         deserialized_dict = {}
         for item in items:
-            if item.startswith("D:k:"):
-                key, value = item.split(":v:", 1)
-                key_type, key_value = extract_type_value(key[4:])  # Remove D:k:
+            if item.startswith("Dictionar:cheie:"):
+                key, value = item.split(":valoare:", 1)
+                key_type, key_value = extract_type_value(key[16:])  # Remove Dictionar:cheie:
                 deserialized_dict[key_value] = custom_deserialize(value)
         return deserialized_dict
 
@@ -104,6 +104,7 @@ def extract_type_value(data_str):
 
 
 data = [{"key1": {'cheie': 'valoare'}}, {"key2": 2}]
+#data = [[[['StRiNg']]]]
 serialized = custom_serialize(data)
 print("Serialized:", serialized)
 

@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 from functools import reduce
 from datetime import datetime, timezone
+import pika
+import json
 
 
 url = 'https://maximum.md/ro/telefoane-si-gadgeturi/telefoane-si-comunicatii/smartphoneuri/'
@@ -56,7 +58,7 @@ def scrape_func(text):
                 'name': name,
                 'price': price_mdl,
                 'link': product_link,
-                'features': features,
+                'description': features,
                 'timestamp': timestamp
             })
 
@@ -76,7 +78,7 @@ def scrape_func(text):
     for product in products_in_eur:
         print(
             f"Name: {product['name']}\nPrice: {product['price']} MDL\nPrice in EUR: {product['price_eur']}\nTimestamp: {product['timestamp']}")
-        for key, value in product['features'].items():
+        for key, value in product['description'].items():
             print(f"{key}: {value}")
         print("\n=====================\n")
 
@@ -84,43 +86,31 @@ def scrape_func(text):
 
     return products_in_eur
 
-def serialize_to_json(filtered_products):
-    json_str = "[\n"
-    for product in filtered_products:
-        json_str += "  {\n"
-        json_str += f'    "Name": "{product["name"]}",\n'
-        json_str += f'    "Price": {product["price"]},\n'
-        json_str += f'    "Price in EUR": {product["price_eur"]:.2f}\n'
-        json_str += "  },\n"
 
-    json_str = json_str.rstrip(",\n")
-    json_str += "\n]"
-    return json_str
+def publish_to_rabbitmq(data):
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='iepure_MQ')
+    )
+    channel = connection.channel()
 
+    channel.queue_declare(queue='data_queue', durable=True)
 
-def serialize_to_xml(filtered_products):
-    xml_str = "<products>\n"
-    for product in filtered_products:
-        xml_str += "  <product>\n"
-        xml_str += f'    <Name>{product["name"]}</Name>\n'
-        xml_str += f'    <Price>{product["price"]}</Price>\n'
-        xml_str += f'    <Price_in_EUR>{product["price_eur"]:.2f}</Price_in_EUR>\n'
-        xml_str += "  </product>\n"
-
-    xml_str += "</products>"
-    return xml_str
+    message = json.dumps(data)
+    channel.basic_publish(
+        exchange='',
+        routing_key='data_queue',
+        body=message,
+        properties=pika.BasicProperties(
+            delivery_mode=2
+        )
+    )
+    print(f"Published message: {message}")
+    connection.close()
 
 
 if __name__ == "__main__":
     if response.status_code == 200:
         filtered_products = scrape_func(response.text)
-        
-        # json_output = serialize_to_json(filtered_products)
-        # print("JSON Output:")
-        # print(json_output)
-        #
-        # xml_output = serialize_to_xml(filtered_products)
-        # print("\nXML Output:")
-        # print(xml_output)
+        publish_to_rabbitmq(filtered_products)
     else:
         print(f"Failed to retrieve the listing page. Status Code: {response.status_code}")

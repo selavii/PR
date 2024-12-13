@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:15
+    container_name: psql
+    environment:
+      POSTGRES_DB: pr
+      POSTGRES_USER: pr
+      POSTGRES_PASSWORD: lab
+    ports:
+      - "5434:5432"
+    networks:
+      - lab_network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "pr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: iepure_MQ
+    ports:
+      - "5672:5672"  # RabbitMQ protocol
+      - "15672:15672" # RabbitMQ management interface
+    networks:
+      - lab_network
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+      - "8888:8888"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - lab_network
+
+volumes:
+  postgres_data:
+
+networks:
+  lab_network:
+    driver: bridge

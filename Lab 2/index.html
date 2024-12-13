@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        input, button { padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Chat Room</h1>
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Enter your message..." />
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        const ws = new WebSocket("ws://127.0.0.1:8000");
+        const chat = document.getElementById("chat");
+
+        ws.onmessage = (event) => {
+            const message = document.createElement("p");
+            message.textContent = event.data;
+            chat.appendChild(message);
+            chat.scrollTop = chat.scrollHeight;
+        };
+
+        function sendMessage() {
+            const input = document.getElementById("messageInput");
+            ws.send(`send_msg:${input.value}`);
+            input.value = "";
+        }
+
+        ws.onopen = () => ws.send("join_room:default_room");
+        window.onbeforeunload = () => ws.send("leave_room");
+    </script>
+</body>
+</html>
